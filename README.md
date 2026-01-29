@@ -21,7 +21,7 @@ Run the fragmentation code as:
 perl script_EE-GAMA.pl 25_1_gama.com
 
 
-After execution, an output file named 25_1_gama_B2_R5.log is generated, where the box size B = 2 Å and cutoff radius R = 5 Å. This file contains detailed information on the fragmentation procedure, including the complete workflow, all final fragments, and their corresponding coefficients.
+After execution, an output file named 25_1_gama_B2_R5.log ( we provided that file also) is generated, where the box size B = 2 Å and cutoff radius R = 5 Å. This file contains detailed information on the fragmentation procedure, including the complete workflow, all final fragments, and their corresponding coefficients.
 
 Here, 25_1_gama.com is the GAMA fragmentation input file for a specific 25-water cluster isomer.
 
