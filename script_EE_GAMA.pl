@@ -1047,8 +1047,24 @@ foreach my $file (@ARGV){
   }
   #$header[3] =~ s/# hf\/3-21g geom=connectivity/#p mp2\/6-311g(d,p)/;
   #splice @header, 0, 1;
-# Creating input files for high levels |||||||||||||||||||||||||||||||||
- foreach my $c (0 .. $#final_frags) {
+# =========================================================
+# Key part of the EE-GAMA method , for obtaining the back ground charges 
+# =========================================================
+my @charges;
+
+open my $ch_fh, '<', '25_1_mulliken.com' # In this part you first need to do Quantum Cal over the full system or isolated monomer to obtain the partial charges I 
+    or die "Cannot open charge file: $!";
+while (<$ch_fh>) {
+    next if /^\s*$/; # skip blank lines
+    my @cols = split;
+    push @charges, $cols[2];  # adjust index if needed
+}
+close $ch_fh;
+
+# =========================================================
+# Create input files for HIGH LEVEL
+# =========================================================
+foreach my $c (0 .. $#final_frags) {
     my $name = ($c + 1);
     open(FILE, '>', "gama_high_$name.gjf") or die($!);
 
@@ -1061,96 +1077,102 @@ foreach my $file (@ARGV){
     print FILE "\n";
 
     # Count hydrogen atoms in this fragment
-    my $h_count = 0;
+    my $h_count_high = 0;
     foreach my $d (0 .. $#{$final_frags[$c]}) {
         my $carry = ($final_frags[$c][$d] - 1);
         my $line = $coordinates[$carry];
         my ($atom) = split(/\s+/, $line);
-        $h_count++ if $atom eq 'H';
+        $h_count_high++ if $atom eq 'H';
     }
 
-    # Determine charge and multiplicity based on H count
-    my $charge = ($h_count % 2 == 0) ? 0 : 1;
-    my $multiplicity = 1;  # assuming singlet always
-
+    # Determine charge and multiplicity
+    my $charge = ($h_count_high % 2 == 0) ? 0 : 1;
+    my $multiplicity = 1;  # singlet
     print FILE "$charge $multiplicity\n";
 
     # Write atom coordinates for the fragment
+    my @carry_bag;
     foreach my $d (0 .. $#{$final_frags[$c]}) {
         my $carry = ($final_frags[$c][$d] - 1);
         print FILE $coordinates[$carry];
         push(@carry_bag, $carry);
     }
 
-    # Add a blank line between fragment and Bq section
-print FILE "\n";
+    print FILE "\n";
 
-# Read Mulliken charges from 'charge_inf_1.com' (5th column)
-my @mulliken_charges;
-open my $ch_fh, '<', '22_GI_CM5.com' or die "Cannot open charge_inf_1.com: $!";
-while (<$ch_fh>) {
-    next if /^\s*$/; # skip blank lines
-    my @cols = split;
-    push @mulliken_charges, $cols[1]; # 5th column is index 4
+    # Add background charges
+    foreach my $e (0 .. $#coordinates_bqs) {
+        unless (grep { $_ == $e } @carry_bag) {
+            my @cols = split ' ', $coordinates_bqs[$e];
+            printf FILE "%12s %12s %12s %12s\n", 
+                $cols[1], $cols[2], $cols[3], $charges[$e];
+        }
+    }
+
+    # Reset carry_bag
+    splice @carry_bag;
+
+    # Gaussian blank lines
+    print FILE ("\n" x 12);
 }
-close $ch_fh;
 
-# Add background charges not in the fragment
-foreach my $e (0 .. $#coordinates_bqs) {
-    unless (grep { $_ == $e } @carry_bag) {
-        my @cols = split ' ', $coordinates_bqs[$e];
-        printf FILE "%12s %12s %12s %12s\n", $cols[1], $cols[2], $cols[3], $mulliken_charges[$e];
+# =========================================================
+# Create input files for LOW LEVEL
+# =========================================================
+unless ($high_level eq "mp2"."/".$basisset && $low_level eq "hf"."/".$basisset) { 
+    foreach my $c (0 .. $#final_frags) {
+        my $name = ($c + 1);
+        open(FILE2, '>', "gama_low_$name.gjf") or die($!);
+
+        print FILE2 "%chk=gama_low_$name.chk\n";
+        print FILE2 "%mem=$mem\n";
+        print FILE2 "%nproc=$nproc\n";
+        print FILE2 "#p $low_level Charge NoSymm\n";
+        print FILE2 "\n";
+        print FILE2 "Title Card Required\n";
+        print FILE2 "\n";
+
+        # Count hydrogen atoms in this fragment
+        my $h_count_low = 0;
+        foreach my $d (0 .. $#{$final_frags[$c]}) {
+            my $carry = ($final_frags[$c][$d] - 1);
+            my $line = $coordinates[$carry];
+            my ($atom) = split(/\s+/, $line);
+            $h_count_low++ if $atom eq 'H';
+        }
+
+        # Determine charge and multiplicity
+        my $charge = ($h_count_low % 2 == 0) ? 0 : 1;
+        my $multiplicity = 1;  # singlet
+        print FILE2 "$charge $multiplicity\n";
+
+        # Write atom coordinates for the fragment
+        my @carry_bag;
+        foreach my $d (0 .. $#{$final_frags[$c]}) {
+            my $carry = ($final_frags[$c][$d] - 1);
+            print FILE2 $coordinates[$carry];
+            push(@carry_bag, $carry);
+        }
+
+        print FILE2 "\n";
+
+        # Add background charges
+        foreach my $e (0 .. $#coordinates_bqs) {
+            unless (grep { $_ == $e } @carry_bag) {
+                my @cols = split ' ', $coordinates_bqs[$e];
+                printf FILE2 "%12s %12s %12s %12s\n", 
+                    $cols[1], $cols[2], $cols[3], $charges[$e];
+            }
+        }
+
+        # Reset carry_bag
+        splice @carry_bag;
+
+        # Gaussian blank lines
+        print FILE2 ("\n" x 12);
     }
 }
 
-splice @carry_bag;
-
-# Add blank lines required by Gaussian
-print FILE ("\n" x 12);
-}
-
-# Creating input files for low levels |||||||||||||||||||||||||||||||||
- unless ($high_level eq "mp2"."/".$basisset && $low_level eq "hf"."/".$basisset){ #if mp2 and hf combination don't create low level input files)
-  #if ($nogdv_low==0){
-   foreach my $c(0..$#final_frags){
-     my $name = ($c+1);
-     open (FILE2, '>', "gama_low_$name.gjf") or die ($!);
-     print FILE2 "%chk=gama_low_$name.chk"."\n";
-     print FILE2 "%mem=$mem"."\n";
-     print FILE2 "%nproc=$nproc"."\n";
-     print FILE2 "#p $low_level"."\n";
-     print FILE2 "\n";
-     print FILE2 "Title Card Required\n";
-     print FILE2 "\n";
-     print FILE2 "0 1\n";
-     foreach my $d(0..$#{$final_frags[$c]}){
-       my $carry = ($final_frags[$c][$d]-1);
-       print FILE2 $coordinates[$carry];
-       push (@carry_bag, $carry);
-     }
-     foreach my $e(0..$#coordinates_bqs){
-       if ($e ~~ @carry_bag){
-         #say $e;
-       }else{
-        print FILE2 $coordinates_bqs[$e];
-       }
-     }
-     splice @carry_bag;
-     print FILE2 "\n";
-     print FILE2 "\n";
-     print FILE2 "\n";
-     print FILE2 "\n";
-     print FILE2 "\n";
-     print FILE2 "\n";
-     print FILE2 "\n";
-     print FILE2 "\n";
-     print FILE2 "\n";
-     print FILE2 "\n";
-     print FILE2 "\n";
-     print FILE2 "\n";
-   }
-  #}
- }
 # Execute high level Input files ||||||||||||||||||||||||||||||||||||||||||
   if ($nogdv_high==0){
     foreach my $c(0..$#final_frags){
