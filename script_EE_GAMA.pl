@@ -172,37 +172,7 @@ foreach my $file (@ARGV){
   unlink "same_input.gjf";
   unlink "same_input.log";
   unlink "same_input.chk";
-# Creating full system at low level input file  |||||||||||||||||||||||||||||||||||||||||||| 
-  open FS, ">", "full_system_low_$just_name.gjf" or die $!;
-    print FS "%chk=full_system_low_$just_name.chk"."\n";
-    print FS "%mem=$mem"."\n";
-    print FS "%nproc=$nproc"."\n";
-    print FS "#p $low_level"."\n";
-    print FS "\n";
-    print FS "Title Card Required\n";
-    print FS "\n";
-    print FS "0 1\n";
-  foreach $i(0..$#x){
-    print FS "$atoms[$i] $x[$i] $y[$i] $z[$i]\n";
-  }
-  print FS "\n";
-  print FS "\n";
-  print FS "\n";
-  print FS "\n";
-  print FS "\n";
-  close FS;
-# Execute the full system at low level |||||||||||||||||||||||||||||||||||||  
-  if ($full_system_low==0){
-    system("gdv full_system_low_$just_name.gjf");
-  }elsif ($full_system_low==1){
-      print "full system at low level will not be performed\n";
-  }
-# Forming chkpoint file for full system at low level |||||||||||||||||||||||||||||||||||||  
-  if ($full_system_low==0){
-    system("formchk full_system_low_$just_name.chk");
-  }elsif ($full_system_low==1){
-      #print "full system fchkpoint file will not be generated\n";
-  }
+
 #  |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
   my $first_gap;
   my $second_gap;
@@ -529,7 +499,6 @@ foreach my $file (@ARGV){
       next if $seen4{$atom_exact}++; #By this line Atom in junction is considered in only one box and also removes coordinate duplicacy in the same box
      print "Atom No."." ".$atom_exact." "."has coordinates"." "."$coboxes[$_]\n";
      push (@{$sys[$a]}, $atom_exact);
-      push (@{$sys[$a]}, $no_of_atoms[$_]);
     }
   }
 #  say Dumper \@in;
@@ -603,13 +572,7 @@ foreach my $file (@ARGV){
     }
     #print "EEEntering line @carry\n";
   }
-  # For Sanity check of number of atoms and duplicacy in groups array
-  #print "==================== Sanity checking =================================\n";
-  #print "Actual No of atoms: $#x\n";
-  #print "No of Atoms in groups: $#groups\n";
-  print MYHANDLE "==================== Sanity checking =================================\n" if ($detailed_output==0); 
-  print MYHANDLE "Actual No of atoms: $#x\n" if ($detailed_output==0);
-  print MYHANDLE "No of Atoms in groups: $#groups\n" if ($detailed_output==0);
+  
   # For Sanity check of duplicacy
   my %seen3;
   foreach my $number (@groups) {
@@ -630,8 +593,6 @@ foreach my $file (@ARGV){
       push (@syscheck, $current+1);
     }
   }
-  #print "No of Atoms in sys: $#syscheck\n";
-  print MYHANDLE "No of Atoms in sys: $#syscheck\n" if ($detailed_output==0);
   my %seen5;
   foreach my $number (@syscheck) {
     next unless $seen5{$number}++;
@@ -1052,12 +1013,12 @@ foreach my $file (@ARGV){
 # =========================================================
 my @charges;
 
-open my $ch_fh, '<', '25_1_mulliken.com' # In this part you first need to do Quantum Cal over the full system or isolated monomer to obtain the partial charges I 
+open my $ch_fh, '<', 'Hydronium_1_22_GD_CM5_hershfield.com' # In this part you first need to do Quantum Cal over the full system or isolated monomer to obtain the partial charges I 
     or die "Cannot open charge file: $!";
 while (<$ch_fh>) {
     next if /^\s*$/; # skip blank lines
     my @cols = split;
-    push @charges, $cols[2];  # adjust index if needed
+    push @charges, $cols[7];  # adjust index if needed
 }
 close $ch_fh;
 
