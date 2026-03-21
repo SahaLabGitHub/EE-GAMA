@@ -1,3 +1,4 @@
+Here we dont provide full code , beacause this algorithm is still under active development, just to give a idea to reader how GAMA and EE-GAMA fragmentation work , we provide a part of the code snippet
 This repository contains all input files for neutral water clusters and protonated (charged) water clusters, along with Perl scripts for performing EE-GAMA calculations (script_EE-GAMA.pl) and non-embedded GAMA calculations (script_GAMA.pl).
 
 For EE-GAMA calculations, two embedding schemes are implemented:
